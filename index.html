@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Gmart Dating</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- CHART.JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{margin:0;font-family:Arial;background:#ffe6f2}
+body.dark{background:#121212;color:#fff}
+.hidden{display:none}
+section{padding:20px}
+
+header{
+background:#ff4da6;color:#fff;padding:15px;text-align:center
+}
+
+button,input,select{
+width:100%;padding:8px;margin:6px 0;border-radius:6px;border:1px solid #ccc
+}
+button{background:#ff4da6;color:#fff;border:none;cursor:pointer}
+
+.card{
+background:#fff;padding:15px;border-radius:15px;margin-bottom:15px;
+box-shadow:0 0 10px rgba(0,0,0,.1)
+}
+
+body.dark .card, body.dark footer{background:#1e1e1e;color:#fff}
+
+.user-card{
+display:flex;gap:10px;align-items:center
+}
+.user-card img{
+width:60px;height:60px;border-radius:50%;object-fit:cover
+}
+
+.chat-box{
+height:280px;background:#fff;padding:10px;
+overflow:auto;border-radius:10px
+}
+
+footer{
+background:#fff;text-align:center;padding:10px;font-size:13px
+}
+
+/* HERO */
+.hero-pro{
+height:70vh;
+background:url("https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e")
+center/cover no-repeat;
+border-radius:0 0 25px 25px;
+position:relative;
+}
+.hero-overlay{
+position:absolute;inset:0;
+background:rgba(0,0,0,.55);
+display:flex;flex-direction:column;
+justify-content:center;align-items:center;
+color:#fff;text-align:center;
+}
+.hero-actions{display:flex;gap:15px}
+.hero-actions .outline{
+background:transparent;border:2px solid #fff
+}
+
+/* DASHBOARD */
+.stats-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:15px
+}
+canvas{max-width:100%}
+
+/* SPLASH */
+#splash{
+position:fixed;inset:0;
+background:linear-gradient(135deg,#ff4da6,#ff99cc);
+display:flex;flex-direction:column;
+justify-content:center;align-items:center;
+color:#fff;z-index:9999
+}
+.loader{
+width:40px;height:40px;border:4px solid rgba(255,255,255,.3);
+border-top:4px solid #fff;border-radius:50%;
+animation:spin 1s linear infinite;margin-top:15px
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+<h1>💖 Gmart Dating</h1>
+<p>Conectando pessoas</p>
+<div class="loader"></div>
+</div>
+
+<header>
+<h2>Gmart Dating</h2>
+<button onclick="toggleDark()">🌙 Modo Escuro</button>
+<button onclick="abrirAdmin()">📊 Dashboard</button>
+</header>
+
+<!-- HOME -->
+<section id="home">
+<div class="hero-pro">
+<div class="hero-overlay">
+<h1>Encontre Conexões Reais</h1>
+<p>Conheça pessoas, converse e crie histórias</p>
+<div class="hero-actions">
+<button onclick="mostrar('cadastro')">Criar Conta</button>
+<button class="outline" onclick="mostrar('login')">Entrar</button>
+</div>
+</div>
+</div>
+</section>
+
+<!-- CADASTRO -->
+<section id="cadastro" class="hidden">
+<div class="card">
+<h3>Cadastro</h3>
+<input id="c_nome" placeholder="Nome">
+<input id="c_idade" type="number" placeholder="Idade">
+<input id="c_pais" placeholder="País">
+<input id="c_senha" type="password" placeholder="Senha">
+<input id="c_foto" type="file" accept="image/*">
+<button onclick="cadastrar()">Cadastrar</button>
+<button onclick="mostrar('home')">Voltar</button>
+</div>
+</section>
+
+<!-- LOGIN -->
+<section id="login" class="hidden">
+<div class="card">
+<h3>Login</h3>
+<input id="l_nome" placeholder="Nome">
+<input id="l_senha" type="password" placeholder="Senha">
+<button onclick="entrar()">Entrar</button>
+<button onclick="mostrar('home')">Voltar</button>
+</div>
+</section>
+
+<!-- USUÁRIOS -->
+<section id="usuarios" class="hidden">
+<h3>Usuários</h3>
+<div id="listaUsuarios"></div>
+<button onclick="logout()">Sair</button>
+</section>
+
+<!-- CHAT -->
+<section id="chat" class="hidden">
+<h3 id="chatTitulo"></h3>
+<div class="chat-box" id="chatBox"></div>
+<input id="msgTexto" placeholder="Mensagem">
+<input id="msgImg" type="file" accept="image/*">
+<button onclick="enviarMsg()">Enviar</button>
+<button onclick="mostrar('usuarios')">Voltar</button>
+</section>
+
+<!-- DASHBOARD / GRÁFICOS -->
+<section id="admin" class="hidden">
+<h2>📊 Estatísticas</h2>
+<div class="stats-grid">
+<div class="card"><canvas id="gPais"></canvas></div>
+<div class="card"><canvas id="gUsuarios"></canvas></div>
+<div class="card"><canvas id="gMatches"></canvas></div>
+<div class="card"><canvas id="gMensagens"></canvas></div>
+</div>
+<button onclick="mostrar('home')">Voltar</button>
+</section>
+
+<footer>
+📞 974972113 | WhatsApp 974972113<br>
+📧 antonygelson5@gmail.com<br>
+🏢 <strong>Gmart Entretenimento</strong>
+</footer>
+
+<script>
+let usuarios=JSON.parse(localStorage.getItem("usuarios"))||[];
+let atual=null,destino=null;
+
+/* SPLASH */
+window.onload=()=>{
+setTimeout(()=>{
+document.getElementById("splash").style.display="none";
+mostrar("home");
+},2000);
+};
+
+function mostrar(id){
+document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));
+document.getElementById(id).classList.remove("hidden");
+if(id==="usuarios")listarUsuarios();
+if(id==="admin")carregarGraficos();
+}
+
+function cadastrar(){
+let f=c_foto.files[0];
+if(!c_nome.value||!c_idade.value||!c_pais.value||!c_senha.value||!f)
+return alert("Preencha tudo");
+
+let r=new FileReader();
+r.onload=()=>{
+let u={
+nome:c_nome.value,idade:c_idade.value,pais:c_pais.value,
+senha:c_senha.value,foto:r.result,chats:{},likes:[]
+};
+usuarios.push(u);
+localStorage.setItem("usuarios",JSON.stringify(usuarios));
+atual=u;
+mostrar("usuarios");
+};
+r.readAsDataURL(f);
+}
+
+function entrar(){
+let u=usuarios.find(u=>u.nome===l_nome.value && u.senha===l_senha.value);
+if(!u)return alert("Login inválido");
+atual=u;mostrar("usuarios");
+}
+
+function listarUsuarios(){
+listaUsuarios.innerHTML="";
+usuarios.forEach(u=>{
+if(u!==atual){
+let d=document.createElement("div");
+d.className="card user-card";
+d.innerHTML=`<img src="${u.foto}">
+<div>${u.nome}<br>${u.idade} - ${u.pais}</div>
+<button onclick="abrirChat('${u.nome}')">💬</button>`;
+listaUsuarios.appendChild(d);
+}});
+}
+
+function abrirChat(nome){
+destino=usuarios.find(u=>u.nome===nome);
+chatTitulo.innerText="Chat com "+destino.nome;
+chatBox.innerHTML="";
+(atual.chats[nome]||[]).forEach(m=>{
+if(m.txt)chatBox.innerHTML+=`<p>${m.txt}</p>`;
+if(m.img)chatBox.innerHTML+=`<img src="${m.img}" width="120">`;
+});
+mostrar("chat");
+}
+
+function enviarMsg(){
+let chat=atual.chats[destino.nome]||[];
+if(msgTexto.value)chat.push({txt:msgTexto.value});
+if(msgImg.files[0]){
+let r=new FileReader();
+r.onload=()=>{chat.push({img:r.result});salvar(chat)};
+r.readAsDataURL(msgImg.files[0]);
+}else salvar(chat);
+}
+
+function salvar(chat){
+atual.chats[destino.nome]=chat;
+localStorage.setItem("usuarios",JSON.stringify(usuarios));
+msgTexto.value="";msgImg.value="";
+abrirChat(destino.nome);
+}
+
+function carregarGraficos(){
+let pais={},mensagens=0;
+usuarios.forEach(u=>{
+pais[u.pais]=(pais[u.pais]||0)+1;
+Object.values(u.chats).forEach(c=>mensagens+=c.length);
+});
+
+new Chart(gPais,{type:"pie",data:{labels:Object.keys(pais),datasets:[{data:Object.values(pais)}]}});
+
+new Chart(gUsuarios,{type:"line",data:{
+labels:["Jan","Fev","Mar","Abr","Mai","Jun"],
+datasets:[{label:"Usuários",data:[1,2,3,usuarios.length,usuarios.length+1]}]
+}});
+
+new Chart(gMatches,{type:"bar",data:{
+labels:["Matches"],datasets:[{data:[usuarios.reduce((a,u)=>a+(u.likes?.length||0),0)]}]
+}});
+
+new Chart(gMensagens,{type:"doughnut",data:{
+labels:["Mensagens"],datasets:[{data:[mensagens]}]
+}});
+}
+
+function toggleDark(){
+document.body.classList.toggle("dark");
+}
+
+function logout(){atual=null;mostrar("home")}
+</script>
+
+</body>
+</html>
